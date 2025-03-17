@@ -1,21 +1,54 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ModalErrorLoginAdmin } from "@/app/_components/modalErrorLoginAdmin";
 
 export default function AdminLogin() {
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const router = useRouter();
-  const ADMIN_PASSWORD = "barber123";
 
-  const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
-      router.push("/admin/dashboard");
-    } else {
+  const handleLogin = async () => {
+    setError("");
+    setShowModal(false);
+
+    try {
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+
+        localStorage.setItem("adminToken", data.token);
+        console.log("Token salvo no localStorage:", data.token);
+        router.push("/admin/dashboard");
+      } else {
+        setError(data.error || "Erro ao fazer login");
+        setShowModal(true);
+      }
+    } catch (error) {
+      setError("Erro na requisição de login");
       setShowModal(true);
+      console.error("Erro no handleSubmit:", error);
     }
   };
+
+  useEffect(() => {
+    const currentId = localStorage.getItem("currentClientId");
+    if (currentId) {
+      console.log(`ID encontrado no localStorage: ${currentId}. Redirecionando para /client/${currentId}`);
+      router.push(`/client/${currentId}`);
+    }
+  }, [router]);
+
+  const handleBackToHome = () => {
+    router.push('/')
+  }
 
   return (
     <div className="w-full h-full flex items-center justify-center bg-zinc-800">
@@ -34,17 +67,21 @@ export default function AdminLogin() {
         >
           Entrar
         </button>
-      </div>
 
+        <button
+        onClick={handleBackToHome}
+        className="w-full mt-4 bg-zinc-600 text-white border-transparent border cursor-pointer p-2 rounded hover:bg-zinc-700 hover:border-white active:bg-blue-800 transform transition-all duration-200 hover:scale-105"
+        >
+          Voltar
+        </button>
+      </div>
 
       {showModal && (
         <ModalErrorLoginAdmin
-        router={router}
-        setShowModal={setShowModal}
+          router={router}
+          setShowModal={setShowModal}
         />
       )}
     </div>
   );
 }
-
-// Animação personalizada no Tailwind (adicione ao global.css ou tailwind.config.ts)
