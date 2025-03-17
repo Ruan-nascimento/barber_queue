@@ -1,8 +1,11 @@
 import { Client } from "@/app/(pages)/admin/dashboard/dashboardTabs";
 import { useEffect, useState } from "react";
+import Error from "next/error";
+import { ErrorModal } from "../error/modal";
 
 export const Pending = () => {
   const [pending, setPending] = useState<Client[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPending = async () => {
     const response = await fetch("/api/pending");
@@ -16,28 +19,49 @@ export const Pending = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleAccept = async (id: number) => {
-    const response = await fetch(`/api/accept/${id}`, {
-      method: "POST",
-    });
+  const handleAccept = async (id: any) => {
+    try {
+      const response = await fetch(`/api/accept/${id}`, {
+        method: "POST",
+      });
 
-    if (response.ok) {
-      await fetchPending();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (response.ok) {
+        await fetchPending();
+      } else {
+        setError(`Erro ao aceitar cliente: ${response.status} - ${data.error || "Desconhecido"}`);
+      }
+    } catch (error: any) {
+      setError(`Erro inesperado: ${error.message}`);
     }
   };
 
-  const handleReject = async (id: number) => {
-    const response = await fetch(`/api/reject/${id}`, {
-      method: "POST",
-    });
+  const handleReject = async (id: any) => {
+    try {
+      const response = await fetch(`/api/reject/${id}`, {
+        method: "DELETE",
+      });
 
-    if (response.ok) {
-      await fetchPending();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (response.ok) {
+        await fetchPending();
+      } else {
+        setError(`Erro ao rejeitar cliente: ${response.status} - ${data.error || "Desconhecido"}`);
+      }
+    } catch (error: any) {
+      setError(`Erro inesperado: ${error.message}`);
     }
+  };
+
+  const closeModal = () => {
+    setError(null);
   };
 
   return (
     <section className="w-full">
+      {error && <ErrorModal isOpen={!!error} onClose={closeModal} errorMessage={error} />}
       {pending.length === 0 ? (
         <p className="text-zinc-50 text-center">Nenhum pedido pendente no momento.</p>
       ) : (

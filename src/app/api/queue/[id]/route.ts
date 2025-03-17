@@ -60,3 +60,24 @@ export async function DELETE(request: Request, context: { params: { clientId: st
       return NextResponse.json({ error: "Erro ao remover o cliente" }, { status: 500 });
     }
   }
+
+  export async function GET(request: Request, { params }: { params: { id: string } }) {
+    const { id } = params;
+  
+    try {
+      const client = await prisma.client.findUnique({
+        where: { id },
+      });
+  
+      if (!client) {
+        return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 });
+      }
+  
+      return NextResponse.json(client, { status: 200 });
+    } catch (error) {
+      console.error("Erro ao buscar cliente:", error);
+      return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
+    } finally {
+      await prisma.$disconnect();
+    }
+  }

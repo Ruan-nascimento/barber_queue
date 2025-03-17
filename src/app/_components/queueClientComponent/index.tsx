@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ErrorModal } from "../error/modal";
+
 
 type Client = {
   id: string;
@@ -20,18 +22,35 @@ type Service = {
 export const QueueClient = () => {
   const [queue, setQueue] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [error, setError] = useState<string | null>(null); // Estado pra controlar o erro
   const router = useRouter();
 
   const fetchQueue = async () => {
-    const response = await fetch("/api/queue");
-    const data = await response.json();
-    setQueue(data);
+    try {
+      const response = await fetch("/api/queue");
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(`Erro ao buscar fila: ${response.status} - ${data.error || "Desconhecido"}`);
+      }
+      const data = await response.json();
+      setQueue(data);
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   const fetchServices = async () => {
-    const response = await fetch("/api/services");
-    const data = await response.json();
-    setServices(data);
+    try {
+      const response = await fetch("/api/services");
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(`Erro ao buscar serviços: ${response.status} - ${data.error || "Desconhecido"}`);
+      }
+      const data = await response.json();
+      setServices(data);
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   useEffect(() => {
@@ -42,17 +61,20 @@ export const QueueClient = () => {
   }, []);
 
   const calculateTotal = (clientServices: string) => {
-    const serviceList = clientServices.split(",").map((s) => s.trim());
+    const serviceList = clientServices.split(",").map((s) => s.trim().replace(/[\[\]'""]/g, ""));
+
     const total = serviceList.reduce((sum, serviceName) => {
-      const service = services.find((s) => s.service.toLowerCase() === serviceName.toLowerCase());
-      return sum + (service?.value ?? 20);
+      const service = services.find((s) => {
+        const serviceMatch = s.service.toLowerCase() === serviceName.toLowerCase();
+        return serviceMatch;
+      });
+      return sum + (service?.value ?? 0);
     }, 0);
     return total;
   };
 
   const handleComplete = async (clientId: string, clientServices: string) => {
     const total = calculateTotal(clientServices);
-    console.log("Enviando PATCH:", { clientId, status: "completed", total });
     try {
       const response = await fetch(`/api/queue/${clientId}`, {
         method: "PATCH",
@@ -64,26 +86,36 @@ export const QueueClient = () => {
       });
 
       const responseData = await response.json();
-      console.log("Resposta da API:", response.status, responseData);
       if (response.ok) {
-        router.push("/client"); // Redireciona pra /client
+        router.push("/client");
       } else {
-        console.error("Erro ao marcar como concluído:", response.status, responseData);
+        throw new Error(`Erro ao marcar como concluído: ${response.status} - ${responseData.error || "Desconhecido"}`);
       }
-    } catch (error) {
-      console.error("Erro na requisição:", error);
+    } catch (err: any) {
+      setError(err.message);
     }
+  };
+
+  const closeModal = () => {
+    setError(null);
   };
 
   return (
     <section className="w-full">
+      {error && <ErrorModal isOpen={!!error} onClose={closeModal} errorMessage={error} />}
       {queue.length === 0 ? (
         <p className="text-zinc-50 text-center">Ninguém na fila no momento.</p>
       ) : (
         <div className="w-full max-h-[60vh] overflow-auto custom-scrollbar bg-zinc-800 rounded-lg shadow-md">
           <table className="w-full text-left">
             <thead className="bg-zinc-600 sticky top-0">
-              <tr><th className="p-3 text-zinc-50 font-semibold">Posição</th><th className="p-3 text-zinc-50 font-semibold">Nome</th><th className="p-3 text-zinc-50 font-semibold">Telefone</th><th className="p-3 text-zinc-50 font-semibold">Serviços</th><th className="p-3 text-zinc-50 font-semibold">Valor</th></tr>
+              <tr>
+                <th className="p-3 text-zinc-50 font-semibold">Posição</th>
+                <th className="p-3 text-zinc-50 font-semibold">Nome</th>
+                <th className="p-3 text-zinc-50 font-semibold">Telefone</th>
+                <th className="p-3 text-zinc-50 font-semibold">Serviços</th>
+                <th className="p-3 text-zinc-50 font-semibold">Valor</th>
+              </tr>
             </thead>
             <tbody>
               {queue.map((client, index) => (

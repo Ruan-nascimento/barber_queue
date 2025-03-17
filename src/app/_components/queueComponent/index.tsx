@@ -40,10 +40,16 @@ export const Queue = () => {
   }, []);
 
   const calculateTotal = (clientServices: string) => {
-    const serviceList = clientServices.split(",").map((s) => s.trim());
+
+    const serviceList = clientServices.split(",").map((s) => s.trim().replace(/[\[\]'""]/g, ""));
+
     const total = serviceList.reduce((sum, serviceName) => {
-      const service = services.find((s) => s.service.toLowerCase() === serviceName.toLowerCase());
-      return sum + (service?.value ?? 20);
+
+      const service = services.find((s) => {
+        const serviceMatch = s.service.toLowerCase() === serviceName.toLowerCase();
+        return serviceMatch;
+      });
+      return sum + (service?.value ?? 0);
     }, 0);
     return total;
   };

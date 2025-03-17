@@ -39,7 +39,26 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
     setServices(data);
   };
 
-  const leaveQueue = async (id:string) => {
+  const fetchClientStatus = async () => {
+    try {
+      const response = await fetch(`/api/queue/${id}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log(`Cliente com ID ${id} não encontrado no banco. Redirecionando para /client.`);
+          localStorage.removeItem("currentClientId");
+          router.push("/client");
+        }
+        return null;
+      }
+      const data = await response.json();
+      return data.status;
+    } catch (error) {
+      console.error("Erro ao buscar status do cliente:", error);
+      return null;
+    }
+  };
+
+  const leaveQueue = async (id: string) => {
     try {
       const response = await fetch(`/api/queue/${id}`, {
         method: "DELETE",
@@ -49,12 +68,11 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
       const responseData = await response.json();
       console.log("Resposta da API (cancelar):", response.status, responseData);
       if (response.ok) {
-  
-        if(id) {
-          const existingId = localStorage.getItem('currentClientId')
-          if(existingId) {
-            localStorage.removeItem('currentClientId')
-            router.push('/client')
+        if (id) {
+          const existingId = localStorage.getItem("currentClientId");
+          if (existingId) {
+            localStorage.removeItem("currentClientId");
+            router.push("/client");
           }
         }
       } else {
@@ -63,7 +81,7 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
     } catch (error) {
       console.error("Erro na requisição de cancelamento:", error);
     }
-  }
+  };
 
   useEffect(() => {
     if (id) {
@@ -96,11 +114,37 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
     }
   }, [router]);
 
+  // Monitora o status diretamente no banco de dados
+  useEffect(() => {
+    if (!id) return;
+
+    const checkStatus = async () => {
+      const status = await fetchClientStatus();
+      if (status === "completed") {
+        console.log(`Status do cliente ${id} mudou para "completed". Removendo ID do localStorage e redirecionando para /client.`);
+        localStorage.removeItem("currentClientId");
+        router.push("/client");
+      }
+    };
+
+    // Verifica imediatamente e depois a cada 500ms
+    checkStatus();
+    const interval = setInterval(checkStatus, 500);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [id, router]);
+
   const calculateTotal = (clientServices: string) => {
-    const serviceList = clientServices.split(",").map((s) => s.trim());
+    const serviceList = clientServices.split(",").map((s) => s.trim().replace(/[\[\]'""]/g, ""));
+
     const total = serviceList.reduce((sum, serviceName) => {
-      const service = services.find((s) => s.service.toLowerCase() === serviceName.toLowerCase());
-      return sum + (service?.value ?? 20);
+      const service = services.find((s) => {
+        const serviceMatch = s.service.toLowerCase() === serviceName.toLowerCase();
+        return serviceMatch;
+      });
+      return sum + (service?.value ?? 0);
     }, 0);
     return total;
   };
@@ -152,26 +196,21 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
           </button>
         </div>
       ) : (
-
-        <div
-        className="flex flex-col items-center"
-        >
+        <div className="flex flex-col items-center">
           <p className="text-zinc-50 text-center mb-6">
             {id ? "Você não está na fila no momento. Aguarde o Barbeiro Aceitar seu Pedido" : "Acompanhe a fila abaixo."}
           </p>
-
-          {
-            id ? (
-              <button
-          className="mt-4 mb-4 w-16 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-all duration-200 cursor-pointer"
-          onClick={() => leaveQueue(id)}>
-            Sair
-          </button>
-            ) :
-            ''
-          }
+          {id ? (
+            <button
+              className="mt-4 mb-4 w-16 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-all duration-200 cursor-pointer"
+              onClick={() => leaveQueue(id)}
+            >
+              Sair
+            </button>
+          ) : (
+            ""
+          )}
         </div>
-        
       )}
 
       {/* Tabela da Fila */}
@@ -181,7 +220,13 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
         <div className="w-full max-h-[60vh] overflow-auto custom-scrollbar bg-zinc-800 rounded-lg shadow-md">
           <table className="w-full text-left">
             <thead className="bg-zinc-600 sticky top-0">
-              <tr><th className="p-3 text-zinc-50 font-semibold">Posição</th><th className="p-3 text-zinc-50 font-semibold">Nome</th><th className="p-3 text-zinc-50 font-semibold">Telefone</th><th className="p-3 text-zinc-50 font-semibold">Serviços</th><th className="p-3 text-zinc-50 font-semibold">Valor</th></tr>
+              <tr>
+                <th className="p-3 text-zinc-50 font-semibold">Posição</th>
+                <th className="p-3 text-zinc-50 font-semibold">Nome</th>
+                <th className="p-3 text-zinc-50 font-semibold">Telefone</th>
+                <th className="p-3 text-zinc-50 font-semibold">Serviços</th>
+                <th className="p-3 text-zinc-50 font-semibold">Valor</th>
+              </tr>
             </thead>
             <tbody>
               {queue.map((client, index) => (

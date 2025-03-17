@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { QueueClient } from "@/app/_components/queueClientComponent";
 
+
 type Service = {
   id: string;
   service: string;
@@ -108,14 +109,14 @@ export default function ClientPage() {
       </nav>
 
       <main className="max-w-4xl mx-auto p-6">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           {activeTab === "queue" ? (
             <motion.div
               key="queue"
-              initial={{ x: 300, opacity: 0 }}
+              initial={{ x: -300, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -300, opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              exit={{ x: -300, opacity: 0.5 }}
+              transition={{ duration: 0.1 }}
             >
               <QueueClient /> {/* Fila geral */}
             </motion.div>
@@ -124,8 +125,8 @@ export default function ClientPage() {
               key="register"
               initial={{ x: 300, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -300, opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              exit={{ x: 300, opacity: 0.5 }}
+              transition={{ duration: 0.1 }}
             >
               <div className="max-w-md w-full bg-zinc-900 rounded-lg shadow-md p-6">
                 <h1 className="text-2xl font-bold mb-6 text-center">Agendar Serviço</h1>

@@ -3,6 +3,7 @@ import { History } from "@/app/_components/historyComponent";
 import { Pending } from "@/app/_components/pendingComponent";
 import { PendingCount } from "@/app/_components/pendingCount";
 import { Queue } from "@/app/_components/queueComponent";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 
 export type Client = {
@@ -61,9 +62,37 @@ export default function DashboardTabs() {
 
       {/* Conteúdo com scroll personalizado */}
       <div className="w-full max-h-[70vh] overflow-auto scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-800 scrollbar-thumb-rounded">
-        {activeTab === "queue" && <Queue />}
-        {activeTab === "pending" && <Pending />}
-        {activeTab === "history" && <History />}
+        <AnimatePresence>
+          <motion.div
+          key="queue"
+          initial={{ x: -300, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -300, opacity: 1 }}
+          transition={{ duration: 1 }}
+          >
+            {activeTab === "queue" && <Queue />}
+          </motion.div>
+
+          <motion.div
+          key="pending"
+          initial={{ x: -300, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -300, opacity: 1 }}
+          transition={{ duration: 1 }}
+          >
+            {activeTab === "pending" && <Pending />}
+          </motion.div>
+
+          <motion.div
+          key="history"
+          initial={{ x: -300, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -300, opacity: 1 }}
+          transition={{ duration: 1 }}
+          >
+            {activeTab === "history" && <History />}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
