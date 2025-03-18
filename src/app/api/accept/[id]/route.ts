@@ -7,10 +7,10 @@ const prisma = new PrismaClient();
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: {params: { id:string}}
 ) {
   try {
-    if (!params.id) {
+    if (!context.params.id) {
       return NextResponse.json(
         { error: "ID do cliente é requerido" },
         { status: 400 }
@@ -18,7 +18,7 @@ export async function POST(
     }
 
     const updatedClient = await prisma.client.update({
-      where: { id: params.id },
+      where: { id: context.params.id },
       data: { status: "queue" },
     });
 
@@ -31,7 +31,3 @@ export async function POST(
     );
   }
 }
-
-process.on("SIGTERM", async () => {
-  await prisma.$disconnect();
-});
