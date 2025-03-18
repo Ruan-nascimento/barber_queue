@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function PATCH(request: Request, context: { params: { clientId: string } }) {
+export async function PATCH(request: Request, context: { params: any }) {
   try {
 
     const { clientId } = context.params;
@@ -36,7 +36,7 @@ export async function PATCH(request: Request, context: { params: { clientId: str
   }
 }
 
-export async function DELETE(request: Request, context: { params: { clientId: string } }) {
+export async function DELETE(request: Request, context: { params: any }) {
     try {
         const { clientId } = context.params;
 
@@ -61,7 +61,7 @@ export async function DELETE(request: Request, context: { params: { clientId: st
     }
   }
 
-  export async function GET(request: Request, { params }: { params: { id: string } }) {
+  export async function GET(request: Request, { params }: { params: any }) {
     const { id } = params;
   
     try {

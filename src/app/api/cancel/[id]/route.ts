@@ -3,9 +3,9 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: { params: any}) {
   try {
-    const clientId = params.id;
+    const clientId = context.params.id;
 
     const client = await prisma.client.findUnique({
       where: { id: clientId },

@@ -3,12 +3,12 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: {params: any}) {
   const formData = await req.formData();
   const value = Number(formData.get("value"));
 
   const client = await prisma.client.update({
-    where: { id: params.id },
+    where: { id: context.params.id },
     data: {
       status: "completed",
       total: value,
