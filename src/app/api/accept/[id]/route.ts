@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export async function POST(
   req: NextRequest,
-  context: {params: { id:string}}
+  context: {params: { id:any}}
 ) {
   try {
     if (!context.params.id) {
