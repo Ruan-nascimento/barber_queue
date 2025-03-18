@@ -8,13 +8,14 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const router = useRouter();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string
 
   const handleLogin = async () => {
     setError("");
     setShowModal(false);
 
     try {
-      const response = await fetch("/api/admin/login", {
+      const response = await fetch(`${API_URL}/api/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -25,8 +26,7 @@ export default function AdminLogin() {
       if (response.ok) {
 
         localStorage.setItem("adminToken", data.token);
-        console.log("Token salvo no localStorage:", data.token);
-        router.push("/admin/dashboard");
+        router.push(`${API_URL}/admin/dashboard`);
       } else {
         setError(data.error || "Erro ao fazer login");
         setShowModal(true);
@@ -41,13 +41,12 @@ export default function AdminLogin() {
   useEffect(() => {
     const currentId = localStorage.getItem("currentClientId");
     if (currentId) {
-      console.log(`ID encontrado no localStorage: ${currentId}. Redirecionando para /client/${currentId}`);
-      router.push(`/client/${currentId}`);
+      router.push(`${API_URL}/client/${currentId}`);
     }
   }, [router]);
 
   const handleBackToHome = () => {
-    router.push('/')
+    router.push(`${API_URL}/`)
   }
 
   return (

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { ErrorModal } from "../error/modal";
 
 type Client = {
   id: string;
@@ -16,20 +17,61 @@ type Service = {
   value: number;
 };
 
+interface ApiErrorResponse {
+  error?: string;
+}
+interface ErrorWithMessage {
+  message: string;
+}
+
+const isErrorWithMessage = (error: unknown): error is ErrorWithMessage => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as ErrorWithMessage).message === "string"
+  );
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (isErrorWithMessage(error)) {
+    return error.message;
+  }
+  return "Erro desconhecido";
+};
+
 export const Queue = () => {
   const [queue, setQueue] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
 
   const fetchQueue = async () => {
-    const response = await fetch("/api/queue");
-    const data = await response.json();
-    setQueue(data);
+    try {
+      const response = await fetch(`${API_URL}/api/queue`);
+      if (!response.ok) {
+        const data: ApiErrorResponse = await response.json();
+        throw new Error(`Erro ao buscar fila: ${response.status} - ${data.error || "Desconhecido"}`);
+      }
+      const data: Client[] = await response.json();
+      setQueue(data);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    }
   };
 
   const fetchServices = async () => {
-    const response = await fetch("/api/services");
-    const data = await response.json();
-    setServices(data);
+    try {
+      const response = await fetch(`${API_URL}/api/services`);
+      if (!response.ok) {
+        const data: ApiErrorResponse = await response.json();
+        throw new Error(`Erro ao buscar serviços: ${response.status} - ${data.error || "Desconhecido"}`);
+      }
+      const data: Service[] = await response.json();
+      setServices(data);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    }
   };
 
   useEffect(() => {
@@ -39,12 +81,10 @@ export const Queue = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const calculateTotal = (clientServices: string) => {
-
+  const calculateTotal = (clientServices: string): number => {
     const serviceList = clientServices.split(",").map((s) => s.trim().replace(/[\[\]'""]/g, ""));
 
     const total = serviceList.reduce((sum, serviceName) => {
-
       const service = services.find((s) => {
         const serviceMatch = s.service.toLowerCase() === serviceName.toLowerCase();
         return serviceMatch;
@@ -56,9 +96,8 @@ export const Queue = () => {
 
   const handleComplete = async (clientId: string, clientServices: string) => {
     const total = calculateTotal(clientServices);
-    console.log("Enviando PATCH:", { clientId, status: "completed", total });
     try {
-      const response = await fetch(`/api/queue/${clientId}`, {
+      const response = await fetch(`${API_URL}/api/queue/${clientId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -67,40 +106,42 @@ export const Queue = () => {
         }),
       });
 
-      const responseData = await response.json();
-      console.log("Resposta da API:", response.status, responseData);
+      const responseData: ApiErrorResponse = await response.json();
       if (response.ok) {
         fetchQueue();
       } else {
-        console.error("Erro ao marcar como concluído:", response.status, responseData);
+        throw new Error(`Erro ao marcar como concluído: ${response.status} - ${responseData.error || "Desconhecido"}`);
       }
-    } catch (error) {
-      console.error("Erro na requisição:", error);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   };
 
   const handleCancel = async (clientId: string) => {
-    console.log("Enviando DELETE para:", clientId);
     try {
-      const response = await fetch(`/api/queue/${clientId}`, {
+      const response = await fetch(`${API_URL}/api/queue/${clientId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
 
-      const responseData = await response.json();
-      console.log("Resposta da API (cancelar):", response.status, responseData);
+      const responseData: ApiErrorResponse = await response.json();
       if (response.ok) {
-        fetchQueue(); 
+        fetchQueue();
       } else {
-        console.error("Erro ao cancelar:", response.status, responseData);
+        throw new Error(`Erro ao cancelar: ${response.status} - ${responseData.error || "Desconhecido"}`);
       }
-    } catch (error) {
-      console.error("Erro na requisição de cancelamento:", error);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
+  };
+
+  const closeModal = () => {
+    setError(null);
   };
 
   return (
     <section className="w-full">
+      {error && <ErrorModal isOpen={!!error} onClose={closeModal} errorMessage={error} />}
       {queue.length === 0 ? (
         <p className="text-zinc-50 text-center">Ninguém na fila no momento.</p>
       ) : (

@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 export const History = () => {
   const [history, setHistory] = useState<Client[]>([]);
 
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string
+
   const fetchHistory = async () => {
-    const response = await fetch("/api/history");
+    const response = await fetch(`${API_URL}/api/history`);
     const data = await response.json();
     setHistory(data);
   };

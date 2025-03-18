@@ -10,7 +10,7 @@ export type Client = {
   id: number;
   name: string;
   phone: string;
-  services: string; // JSON string
+  services: string;
   status: string;
   total: number;
   createdAt: string;
@@ -21,7 +21,7 @@ export default function DashboardTabs() {
 
   return (
     <div className="w-full max-w-full mx-auto">
-      {/* Navegação */}
+
       <nav className="flex flex-wrap gap-4 mb-6">
         <button
           onClick={() => setActiveTab("queue")}
@@ -60,7 +60,6 @@ export default function DashboardTabs() {
         </button>
       </nav>
 
-      {/* Conteúdo com scroll personalizado */}
       <div className="w-full max-h-[70vh] overflow-auto scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-800 scrollbar-thumb-rounded">
         <AnimatePresence>
           <motion.div

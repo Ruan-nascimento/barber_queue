@@ -11,9 +11,10 @@ export const ServicesModal = ({ onClose }: { onClose: () => void }) => {
   const [services, setServices] = useState<Service[]>([]);
   const [newServiceName, setNewServiceName] = useState("");
   const [newServiceValue, setNewServiceValue] = useState("");
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string
 
   const fetchServices = async () => {
-    const response = await fetch("/api/services");
+    const response = await fetch(`${API_URL}/api/services`);
     const data = await response.json();
     setServices(data);
   };
@@ -25,7 +26,7 @@ export const ServicesModal = ({ onClose }: { onClose: () => void }) => {
   const handleSaveService = async () => {
     if (!newServiceName || !newServiceValue) return;
 
-    const response = await fetch("/api/services", {
+    const response = await fetch(`${API_URL}/api/services`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -42,7 +43,7 @@ export const ServicesModal = ({ onClose }: { onClose: () => void }) => {
   };
 
   const handleDeleteService = async (id: string) => {
-    const response = await fetch(`/api/services/${id}`, {
+    const response = await fetch(`${API_URL}/api/services/${id}`, {
       method: "DELETE",
     });
 
@@ -63,7 +64,7 @@ export const ServicesModal = ({ onClose }: { onClose: () => void }) => {
       onClick={handleOverlayClick}
     >
       <div className="bg-zinc-900 p-6 rounded-lg shadow-lg w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl flex flex-col relative">
-        {/* Botão de Fechar */}
+
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-zinc-100 hover:text-red-500 transition-all duration-200 cursor-pointer text-2xl"
@@ -72,7 +73,7 @@ export const ServicesModal = ({ onClose }: { onClose: () => void }) => {
         </button>
         <h2 className="text-2xl font-bold text-zinc-100 mb-6">Gerenciar Serviços</h2>
         <div className="flex flex-col gap-4">
-          {/* Formulário para adicionar serviço */}
+   
           <div className="flex flex-col gap-4">
             <input
               type="text"
@@ -97,7 +98,6 @@ export const ServicesModal = ({ onClose }: { onClose: () => void }) => {
             </button>
           </div>
 
-          {/* Lista de Serviços */}
           <div className="mt-4 max-h-[50vh] overflow-auto custom-scrollbar">
             {services.length === 0 ? (
               <p className="text-zinc-300">Nenhum serviço cadastrado.</p>

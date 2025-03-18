@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { ErrorModal } from "@/app/_components/error/modal";
 
 type Client = {
   id: number;
@@ -12,17 +13,42 @@ type Client = {
   createdAt: string;
 };
 
+type ApiErrorResponse = {
+  error?: string;
+};
+
+interface ErrorWithMessage {
+  message: string;
+}
+
+const isErrorWithMessage = (error: unknown): error is ErrorWithMessage => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as ErrorWithMessage).message === "string"
+  );
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (isErrorWithMessage(error)) {
+    return error.message;
+  }
+  return "Erro desconhecido";
+};
+
 export default function QueuePage() {
   const [queue, setQueue] = useState<Client[]>([]);
   const [notified, setNotified] = useState(false);
   const [clientName, setClientName] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const clientId = Number(searchParams.get("clientId"));
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
 
   const fetchQueue = async () => {
-    const response = await fetch("/api/queue");
+    const response = await fetch(`${API_URL}/api/queue`);
     const data = await response.json();
     setQueue(data);
 
@@ -33,14 +59,14 @@ export default function QueuePage() {
   };
 
   const handleCancel = async () => {
-    setErrorMessage(null);
+    setError(null);
     try {
-      const response = await fetch(`/api/cancel/${clientId}`, {
+      const response = await fetch(`${API_URL}/api/cancel/${clientId}`, {
         method: "POST",
       });
 
       if (response.ok) {
-        router.push("/"); // Redireciona pra home
+        router.push(`${API_URL}/`);
       } else {
         const text = await response.text();
         let errorData;
@@ -50,12 +76,10 @@ export default function QueuePage() {
           errorData = { error: "Resposta inválida da API" };
         }
         const message = errorData.error || `Erro ao cancelar (status: ${response.status})`;
-        setErrorMessage(message);
-        console.error("Erro ao cancelar:", { status: response.status, text, errorData });
+        setError(message);
       }
     } catch (error) {
-      setErrorMessage("Erro na requisição de cancelamento.");
-      console.error("Erro na requisição de cancelamento:", error);
+      setError(getErrorMessage(error));
     }
   };
 
@@ -68,7 +92,7 @@ export default function QueuePage() {
   useEffect(() => {
     if (queue.length > 0 && queue[0].id === clientId && !notified) {
       setNotified(true);
-      setTimeout(() => router.push("/"), 5000); // Redireciona após 5 segundos
+      setTimeout(() => router.push(`${API_URL}/`), 5000);
     }
   }, [queue, clientId, notified, router]);
 
@@ -81,8 +105,13 @@ export default function QueuePage() {
     return `Olá, ${clientName}, aguarde sua vez na fila.`;
   };
 
+  const closeModal = () => {
+    setError(null);
+  };
+
   return (
     <div className="min-h-screen bg-zinc-800 text-zinc-100 flex flex-col items-center p-6">
+      {error && <ErrorModal isOpen={!!error} onClose={closeModal} errorMessage={error} />}
       <h1 className="text-2xl font-bold mb-4">Fila Atual</h1>
       
       <p
@@ -130,9 +159,6 @@ export default function QueuePage() {
       >
         Cancelar
       </button>
-      {errorMessage && (
-        <p className="mt-4 text-sm text-red-400">{errorMessage}</p>
-      )}
       <p className="mt-4 text-sm text-zinc-400">
         Atualizando automaticamente a cada 5 segundos...
       </p>

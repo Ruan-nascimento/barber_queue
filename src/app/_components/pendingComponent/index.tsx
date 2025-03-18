@@ -6,9 +6,10 @@ import { ErrorModal } from "../error/modal";
 export const Pending = () => {
   const [pending, setPending] = useState<Client[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string
 
   const fetchPending = async () => {
-    const response = await fetch("/api/pending");
+    const response = await fetch(`${API_URL}/api/pending`);
     const data = await response.json();
     setPending(data);
   };
@@ -21,7 +22,7 @@ export const Pending = () => {
 
   const handleAccept = async (id: any) => {
     try {
-      const response = await fetch(`/api/accept/${id}`, {
+      const response = await fetch(`${API_URL}/api/accept/${id}`, {
         method: "POST",
       });
 
@@ -39,7 +40,7 @@ export const Pending = () => {
 
   const handleReject = async (id: any) => {
     try {
-      const response = await fetch(`/api/reject/${id}`, {
+      const response = await fetch(`${API_URL}/api/rejected/${id}`, {
         method: "DELETE",
       });
 

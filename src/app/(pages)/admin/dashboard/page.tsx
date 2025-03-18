@@ -5,12 +5,39 @@ import DashboardTabs from "./dashboardTabs";
 import BalanceGrid from "./BalanceGrid";
 import { Grid } from "@/app/_components/grid";
 import { ServicesManager } from "@/app/_components/servicesManager";
+import { ErrorModal } from "@/app/_components/error/modal";
+
+type ApiErrorResponse = {
+  error?: string;
+};
+
+interface ErrorWithMessage {
+  message: string;
+}
+
+const isErrorWithMessage = (error: unknown): error is ErrorWithMessage => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as ErrorWithMessage).message === "string"
+  );
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (isErrorWithMessage(error)) {
+    return error.message;
+  }
+  return "Erro desconhecido";
+};
 
 export default function AdminDashboard() {
   const [queueCount, setQueueCount] = useState<number | null>(null);
   const [isValid, setIsValid] = useState<boolean | null>(null); 
-  const [time, setTime] = useState(0)
+  const [time, setTime] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -20,46 +47,54 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
     if (!token) {
-      console.log("Nenhum token encontrado. Redirecionando para /admin/login");
-      router.push("/admin/login");
+      router.push(`${API_URL}/admin/login`);
       return;
     }
-    fetch("/api/admin/verify-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
+
+    const verifyToken = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/verify-token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(`Erro ao verificar token: ${response.status} - ${data.error || "Desconhecido"}`);
+        }
         if (!data.valid) {
-          console.log("Token inválido ou expirado. Redirecionando para /admin/login");
           localStorage.removeItem("adminToken");
-          router.push("/admin/login");
+          router.push(`${API_URL}/admin/login`);
         } else {
           setIsValid(true);
-          // Busca os dados do dashboard
-          fetch("/api/admin/dashboard-data")
-            .then((res) => res.json())
-            .then((data) => {
-              setQueueCount(data.queueCount);
-            })
-            .catch((error) => console.error("Erro ao buscar dados do dashboard:", error));
+
+          const dashboardResponse = await fetch(`${API_URL}/api/admin/dashboard-data`);
+          const dashboardData = await dashboardResponse.json();
+          if (!dashboardResponse.ok) {
+            throw new Error(`Erro ao buscar dados do dashboard: ${dashboardResponse.status} - ${dashboardData.error || "Desconhecido"}`);
+          }
+          setQueueCount(dashboardData.queueCount);
         }
-      })
-      .catch((error) => {
-        console.error("Erro ao verificar o token:", error);
+      } catch (err: unknown) {
+        setError(getErrorMessage(err));
         localStorage.removeItem("adminToken");
-        router.push("/admin/login");
-      });
+        router.push(`${API_URL}/admin/login`);
+      }
+    };
+
+    verifyToken();
   }, [router, time]);
 
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
-    router.push("/admin/login");
+    router.push(`${API_URL}/admin/login`);
+  };
+
+  const closeModal = () => {
+    setError(null);
   };
 
   if (isValid === null) {
@@ -67,12 +102,11 @@ export default function AdminDashboard() {
   }
 
   if (!isValid) {
-    return null; // O redirecionamento já cuida disso
+    return null; 
   }
 
   return (
     <div className="bg-zinc-800 text-zinc-100 min-h-screen flex flex-col">
-      {/* Header */}
       <header className="bg-zinc-900 p-4 shadow-md">
         <div className="w-full max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
           <h1 className="text-2xl font-bold">Barber Dashboard</h1>
@@ -82,7 +116,6 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Main */}
       <main className="flex-1 w-full max-w-7xl mx-auto p-6">
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <BalanceGrid />
@@ -94,13 +127,13 @@ export default function AdminDashboard() {
           </Grid>
         </div>
 
-        {/* Abas */}
         <div className="w-full max-h-[70vh] overflow-auto scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-800 scrollbar-thumb-rounded">
           <DashboardTabs />
         </div>
       </main>
 
       <ServicesManager />
+      {error && <ErrorModal isOpen={!!error} onClose={closeModal} errorMessage={error} />}
     </div>
   );
 }

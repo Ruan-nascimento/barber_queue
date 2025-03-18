@@ -5,9 +5,10 @@ import { Grid } from "@/app/_components/grid";
 export default function BalanceGrid() {
   const [period, setPeriod] = useState<string>("today");
   const [balance, setBalance] = useState<number>(0);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string
 
   const fetchBalance = async () => {
-    const response = await fetch(`/api/balance?period=${period}`);
+    const response = await fetch(`${API_URL}/api/balance?period=${period}`);
     const data = await response.json();
     setBalance(data.balance);
   };

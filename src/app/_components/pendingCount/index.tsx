@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 export const PendingCount = () => {
 
     const [pending, setPending] = useState(0)
+    const API_URL = process.env.NEXT_PUBLIC_API_URL as string
 
     const fetchPending = async () => {
-        const response = await fetch("/api/alertPending");
+        const response = await fetch(`${API_URL}/api/alertPending`);
         const data = await response.json();
         setPending(data);
       };

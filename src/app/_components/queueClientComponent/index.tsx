@@ -22,12 +22,13 @@ type Service = {
 export const QueueClient = () => {
   const [queue, setQueue] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [error, setError] = useState<string | null>(null); // Estado pra controlar o erro
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string
 
   const fetchQueue = async () => {
     try {
-      const response = await fetch("/api/queue");
+      const response = await fetch(`${API_URL}/api/queue`);
       if (!response.ok) {
         const data = await response.json();
         throw new Error(`Erro ao buscar fila: ${response.status} - ${data.error || "Desconhecido"}`);
@@ -41,7 +42,7 @@ export const QueueClient = () => {
 
   const fetchServices = async () => {
     try {
-      const response = await fetch("/api/services");
+      const response = await fetch(`${API_URL}/api/services`);
       if (!response.ok) {
         const data = await response.json();
         throw new Error(`Erro ao buscar serviços: ${response.status} - ${data.error || "Desconhecido"}`);
@@ -76,7 +77,7 @@ export const QueueClient = () => {
   const handleComplete = async (clientId: string, clientServices: string) => {
     const total = calculateTotal(clientServices);
     try {
-      const response = await fetch(`/api/queue/${clientId}`, {
+      const response = await fetch(`${API_URL}/api/queue/${clientId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -87,7 +88,7 @@ export const QueueClient = () => {
 
       const responseData = await response.json();
       if (response.ok) {
-        router.push("/client");
+        router.push(`${API_URL}/client`);
       } else {
         throw new Error(`Erro ao marcar como concluído: ${response.status} - ${responseData.error || "Desconhecido"}`);
       }

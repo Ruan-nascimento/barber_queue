@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import * as React from "react"; // Importa React pra usar React.use()
+import * as React from "react";
+import { ErrorModal } from "@/app/_components/error/modal";
 
 type Client = {
   id: string;
@@ -18,68 +19,91 @@ type Service = {
   value: number;
 };
 
+type ApiErrorResponse = {
+  error?: string;
+};
+
+interface ErrorWithMessage {
+  message: string;
+}
+
+const isErrorWithMessage = (error: unknown): error is ErrorWithMessage => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as ErrorWithMessage).message === "string"
+  );
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (isErrorWithMessage(error)) {
+    return error.message;
+  }
+  return "Erro desconhecido";
+};
+
 export default function QueueClient({ params }: { params: Promise<{ id: string }> }) {
   const [queue, setQueue] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
 
-  // Desembrulha o params usando React.use()
   const resolvedParams = React.use(params);
   const id = resolvedParams.id;
 
   const fetchQueue = async () => {
-    const response = await fetch("/api/queue");
+    const response = await fetch(`${API_URL}/api/queue`);
     const data = await response.json();
     setQueue(data);
   };
 
   const fetchServices = async () => {
-    const response = await fetch("/api/services");
+    const response = await fetch(`${API_URL}/api/services`);
     const data = await response.json();
     setServices(data);
   };
 
   const fetchClientStatus = async () => {
     try {
-      const response = await fetch(`/api/queue/${id}`);
+      const response = await fetch(`${API_URL}/api/queue/${id}`);
       if (!response.ok) {
         if (response.status === 404) {
-          console.log(`Cliente com ID ${id} não encontrado no banco. Redirecionando para /client.`);
           localStorage.removeItem("currentClientId");
-          router.push("/client");
+          router.push(`${API_URL}/client`);
         }
         return null;
       }
       const data = await response.json();
       return data.status;
-    } catch (error) {
-      console.error("Erro ao buscar status do cliente:", error);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
       return null;
     }
   };
 
   const leaveQueue = async (id: string) => {
     try {
-      const response = await fetch(`/api/queue/${id}`, {
+      const response = await fetch(`${API_URL}/api/queue/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
 
       const responseData = await response.json();
-      console.log("Resposta da API (cancelar):", response.status, responseData);
       if (response.ok) {
         if (id) {
           const existingId = localStorage.getItem("currentClientId");
           if (existingId) {
             localStorage.removeItem("currentClientId");
-            router.push("/client");
+            router.push(`${API_URL}/client`);
           }
         }
       } else {
-        console.error("Erro ao cancelar:", response.status, responseData);
+        setError(`Erro ao cancelar: ${response.status} - ${responseData.error || "Desconhecido"}`);
       }
-    } catch (error) {
-      console.error("Erro na requisição de cancelamento:", error);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   };
 
@@ -88,9 +112,6 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
       const existingId = localStorage.getItem("currentClientId");
       if (!existingId) {
         localStorage.setItem("currentClientId", id);
-        console.log(`ID ${id} salvo no localStorage, pois não havia um anterior.`);
-      } else {
-        console.log(`ID ${existingId} já existe no localStorage. Nenhum novo ID salvo.`);
       }
 
       fetchQueue();
@@ -100,34 +121,28 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
         clearInterval(interval);
       };
     } else {
-      console.error("id não definido!");
-      router.push("/client"); // Redireciona pra /client se o id não estiver definido
+      router.push(`${API_URL}/client`);
     }
   }, [id, router]);
 
-  // Verifica se há um currentClientId no localStorage, se não, redireciona pra /client
   useEffect(() => {
     const currentId = localStorage.getItem("currentClientId");
     if (!currentId) {
-      console.log("Nenhum ID no localStorage. Redirecionando para /client");
-      router.push(`/client`);
+      router.push(`${API_URL}/client`);
     }
   }, [router]);
 
-  // Monitora o status diretamente no banco de dados
   useEffect(() => {
     if (!id) return;
 
     const checkStatus = async () => {
       const status = await fetchClientStatus();
       if (status === "completed") {
-        console.log(`Status do cliente ${id} mudou para "completed". Removendo ID do localStorage e redirecionando para /client.`);
         localStorage.removeItem("currentClientId");
-        router.push("/client");
+        router.push(`${API_URL}/client`);
       }
     };
 
-    // Verifica imediatamente e depois a cada 500ms
     checkStatus();
     const interval = setInterval(checkStatus, 500);
 
@@ -151,23 +166,20 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
 
   const handleCancel = async (id: string) => {
     try {
-      const response = await fetch(`/api/queue/${id}`, {
+      const response = await fetch(`${API_URL}/api/queue/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
 
       const responseData = await response.json();
-      console.log("Resposta da API (cancelar):", response.status, responseData);
       if (response.ok) {
-        // Remove o id do localStorage ao cancelar
         localStorage.removeItem("currentClientId");
-        console.log(`ID ${id} removido do localStorage.`);
-        router.push("/client"); // Volta pra fila geral
+        router.push(`${API_URL}/client`);
       } else {
-        console.error("Erro ao cancelar:", response.status, responseData);
+        setError(`Erro ao cancelar: ${response.status} - ${responseData.error || "Desconhecido"}`);
       }
-    } catch (error) {
-      console.error("Erro na requisição de cancelamento:", error);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   };
 
@@ -175,9 +187,14 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
   const clientPosition = queue.findIndex((client) => client.id === id) + 1;
   const peopleAhead = clientPosition > 0 ? clientPosition - 1 : 0;
 
+  const closeModal = () => {
+    setError(null);
+  };
+
   return (
     <section className="w-full min-h-screen bg-zinc-900 p-6">
-      {/* Textos Personalizados e Botão Cancelar */}
+      {error && <ErrorModal isOpen={!!error} onClose={closeModal} errorMessage={error} />}
+
       {id && currentClient ? (
         <div className="mb-6 text-center">
           <h2 className="text-2xl font-bold text-zinc-50">
@@ -213,7 +230,6 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
         </div>
       )}
 
-      {/* Tabela da Fila */}
       {queue.length === 0 ? (
         <p className="text-zinc-50 text-center">Ninguém na fila no momento.</p>
       ) : (

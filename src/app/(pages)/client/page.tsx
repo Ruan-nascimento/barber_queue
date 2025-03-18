@@ -3,12 +3,41 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { QueueClient } from "@/app/_components/queueClientComponent";
-
+import { ErrorModal } from "@/app/_components/error/modal";
 
 type Service = {
   id: string;
   service: string;
   value: number;
+};
+
+type ApiErrorResponse = {
+  error?: string;
+};
+
+type ApiSuccessResponse = {
+  clientId: string;
+  token?: string; 
+};
+
+interface ErrorWithMessage {
+  message: string;
+}
+
+const isErrorWithMessage = (error: unknown): error is ErrorWithMessage => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as ErrorWithMessage).message === "string"
+  );
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (isErrorWithMessage(error)) {
+    return error.message;
+  }
+  return "Erro desconhecido";
 };
 
 export default function ClientPage() {
@@ -18,19 +47,20 @@ export default function ClientPage() {
   const [services, setServices] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
 
   const fetchServices = async () => {
-    const response = await fetch("/api/services");
+    const response = await fetch(`${API_URL}/api/services`);
     const data = await response.json();
     setAvailableServices(data);
   };
 
-
   useEffect(() => {
     const currentId = localStorage.getItem("currentClientId");
     if (currentId) {
-      router.push(`/client/${currentId}`);
+      router.push(`${API_URL}/client/${currentId}`);
     }
   }, [router]);
 
@@ -51,7 +81,7 @@ export default function ClientPage() {
     setMessage("Enviando agendamento...");
 
     try {
-      const response = await fetch("/api/request", {
+      const response = await fetch(`${API_URL}/api/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, phone, services }),
@@ -60,23 +90,31 @@ export default function ClientPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage("Agendamento solicitado! Redirecionando...");
-        setName("");
-        setPhone("");
-        setServices([]);
-        router.push(`/client/${data.clientId}`); // Redireciona pra fila personalizada
+        if ('clientId' in data) {
+          const successData = data as ApiSuccessResponse;
+          setMessage("Agendamento solicitado! Redirecionando...");
+          setName("");
+          setPhone("");
+          setServices([]);
+          router.push(`${API_URL}/client/${successData.clientId}`);
+        } else {
+          setMessage("Resposta de sucesso inválida.");
+        }
       } else {
         setMessage(data.error || "Erro ao enviar o agendamento.");
       }
-    } catch (error) {
-      setMessage("Erro na requisição de agendamento.");
-      console.error("Erro no handleSubmit:", error);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   };
 
   const handleBackToHome = () => {
-    router.push('/')
-  }
+    router.push(`${API_URL}/`);
+  };
+
+  const closeModal = () => {
+    setError(null);
+  };
 
   return (
     <div className="min-h-screen bg-zinc-900 text-zinc-100">
@@ -100,8 +138,8 @@ export default function ClientPage() {
           </button>
 
           <button
-          className="px-4 py-2 rounded bg-zinc-600 duration-200 ease-in-out border border-transparent hover:border-white hover:bg-zinc-700 cursor-pointer"
-          onClick={handleBackToHome}
+            className="px-4 py-2 rounded bg-zinc-600 duration-200 ease-in-out border border-transparent hover:border-white hover:bg-zinc-700 cursor-pointer"
+            onClick={handleBackToHome}
           >
             Voltar
           </button>
@@ -196,6 +234,8 @@ export default function ClientPage() {
           )}
         </AnimatePresence>
       </main>
+
+      {error && <ErrorModal isOpen={!!error} onClose={() => setError(null)} errorMessage={error} />}
     </div>
   );
 }
