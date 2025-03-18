@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: { id: any } }
 ) {
   try {
     const { id } = context.params; // Extraindo o ID corretamente
