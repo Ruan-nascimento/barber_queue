@@ -50,8 +50,8 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-zinc-800">
-      <div className="p-6 bg-zinc-700 rounded-lg shadow-lg transform transition-all duration-300">
+    <div className="w-full h-full flex items-center justify-center bg-zinc-800 p-2">
+      <div className="p-6 min-w-[250px] bg-zinc-700 rounded-lg shadow-lg transform transition-all duration-300">
         <h2 className="text-2xl font-bold text-zinc-50 mb-4 text-center">Login Admin</h2>
         <input
           type="password"
