@@ -98,7 +98,7 @@ export default function AdminDashboard() {
   };
 
   if (isValid === null) {
-    return <div className="w-full min-h-screen bg-zinc-900 flex items-center justify-center text-zinc-50">Verificando...</div>;
+    return <div className="w-full min-h-screen bg-zinc-900 flex items-center justify-center text-zinc-50">Carregando...</div>;
   }
 
   if (!isValid) {
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
     <div className="bg-zinc-800 text-zinc-100 min-h-screen flex flex-col">
       <header className="bg-zinc-900 p-4 shadow-md">
         <div className="w-full max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
-          <h1 className="text-2xl font-bold">Barber Dashboard</h1>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
           <button onClick={handleLogout} className="text-zinc-400 hover:text-zinc-100 transition-all duration-200 cursor-pointer">
             Sair
           </button>

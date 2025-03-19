@@ -215,7 +215,7 @@ export default function QueueClient({ params }: { params: Promise<{ id: string }
       ) : (
         <div className="flex flex-col items-center">
           <p className="text-zinc-50 text-center mb-6">
-            {id ? "Você não está na fila no momento. Aguarde o Barbeiro Aceitar seu Pedido" : "Acompanhe a fila abaixo."}
+            {id ? "Você não está na fila no momento. Aguarde Alguém Aceitar seu Pedido" : "Acompanhe a fila abaixo."}
           </p>
           {id ? (
             <button
